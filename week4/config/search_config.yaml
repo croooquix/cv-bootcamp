@@ -1,0 +1,27 @@
+# 🛍️ Week 4 Multimodal Fashion Search Configuration
+
+paths:
+  # YOLO Model Path (3주차에서 최적화한 YOLOv8s 가중치 사용)
+  yolo_model_path: "c:/Users/User/Projects/cv-bootcamp/runs/detect/train5/weights/best.pt"
+  yolo_fallback_path: "yolov8n.pt"
+  
+  # 데이터셋 경로
+  dataset_images_dir: "c:/Users/User/Projects/cv-bootcamp/week3/data/train/images"
+  
+  # 인덱스 및 메타데이터 저장 경로
+  index_save_path: "week4/index/fashion_index.faiss"
+  metadata_save_path: "week4/index/fashion_meta.json"
+
+clip:
+  # OpenAI CLIP Model (Hugging Face)
+  model_name: "openai/clip-vit-base-patch32"
+  embedding_dim: 512
+
+crop:
+  # 멘토 피드백 #1: 타이트한 박스로 인한 이미지 잘림 방지 (10% 여백 추가)
+  padding_ratio: 0.10
+
+search:
+  top_k: 5
+  # 멘토 피드백 #2: Faiss 코사인 유사도 검색용 L2 정규화 사용 여부
+  normalize_l2: true

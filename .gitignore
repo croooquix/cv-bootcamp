@@ -31,4 +31,8 @@ runs/
 # Temporary crop test outputs
 crop_*.jpg
 
+# Week 4 Vector Index
+week4/index/
+*.faiss
+
 
