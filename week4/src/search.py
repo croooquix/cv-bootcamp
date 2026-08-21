@@ -34,10 +34,29 @@ class FashionSearchEngine:
         yolo_path = self.config["paths"]["yolo_model_path"]
         if not os.path.exists(yolo_path):
             yolo_path = self.config["paths"]["yolo_fallback_path"]
-            
-        self.yolo_model = YOLO(yolo_path)
+        # 텍스트 검색에는 YOLO가 필요하지 않으므로 이미지 검색 시점에 로드합니다.
+        self.yolo_model = None
         self.processor, self.clip_model, self.device = load_clip_model(self.config["clip"]["model_name"])
+        # self.yolo_model = YOLO(yolo_path)
+        # self.processor, self.clip_model, self.device = load_clip_model(self.config["clip"]["model_name"])
         self.padding_ratio = self.config["crop"]["padding_ratio"]
+
+
+    def _get_yolo_model(self):
+        """이미지 검색이 처음 호출될 때 YOLO 모델을 한 번만 로드합니다."""
+        if self.yolo_model is None:
+            yolo_path = os.environ.get(
+                "YOLO_MODEL_PATH",
+                self.config["paths"]["yolo_model_path"],
+            )
+
+            if not os.path.exists(yolo_path):
+                yolo_path = self.config["paths"]["yolo_fallback_path"]
+
+            print(f"[*] YOLO 모델 로딩 중: {yolo_path}")
+            self.yolo_model = YOLO(yolo_path)
+
+        return self.yolo_model
 
     def search_by_image(self, image_input, top_k=5):
         """
@@ -52,7 +71,8 @@ class FashionSearchEngine:
             image = image_input
 
         # 1. YOLO로 쿼리 이미지 내 의류 검출 및 패딩 크롭 (멘토 피드백 #1)
-        results = self.yolo_model(image, verbose=False)
+        yolo_model = self._get_yolo_model()
+        results = yolo_model(image, verbose=False)
         cropped_img = None
         detected_class = "Unknown"
 

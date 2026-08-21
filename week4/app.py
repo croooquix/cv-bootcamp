@@ -2,16 +2,18 @@ import ssl
 ssl.SSLContext._load_windows_store_certs = lambda self, storename, purpose: None
 
 import os
-import sys
+
 import numpy as np
 import cv2
 from PIL import Image
 import streamlit as st
+import requests
 
-# week4/src 모듈 경로 추가
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+API_BASE_URL = os.environ.get(
+    "FASHION_API_URL",
+    "http://127.0.0.1:8000",
+)
 
-from search import FashionSearchEngine
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -25,10 +27,45 @@ st.set_page_config(
 # [멘토 피드백 #3 반영] @st.cache_resource 데코레이터를 사용하여
 # YOLO, CLIP, Faiss 모델 로딩을 최초 1회만 수행하고 메모리에 캐싱합니다.
 # -------------------------------------------------------------------
-@st.cache_resource(show_spinner="🚀 AI 모델 및 벡터 데이터베이스를 불러오는 중입니다...")
-def get_search_engine():
-    config_path = os.path.join(os.path.dirname(__file__), "config/search_config.yaml")
-    return FashionSearchEngine(config_path=config_path)
+
+def search_text_via_api(query: str, top_k: int):
+    response = requests.post(
+        f"{API_BASE_URL}/search/text",
+        json={
+            "query": query,
+            "top_k": top_k,
+        },
+        timeout=60,
+    )
+
+    response.raise_for_status()
+    return response.json()["results"]
+
+
+def get_item_image_url(item_id: int):
+    return f"{API_BASE_URL}/items/{item_id}/image"
+
+def search_image_via_api(
+    filename: str,
+    content_type: str,
+    file_bytes: bytes,
+    top_k: int,
+):
+    response = requests.post(
+        f"{API_BASE_URL}/search/image",
+        params={"top_k": top_k},
+        files={
+            "file": (
+                filename,
+                file_bytes,
+                content_type,
+            )
+        },
+        timeout=120,
+    )
+
+    response.raise_for_status()
+    return response.json()
 
 def main():
     # 헤더
@@ -41,14 +78,7 @@ def main():
         st.header("⚙️ 검색 설정")
         top_k = st.slider("추천 아이템 개수 (Top-K)", min_value=1, max_value=10, value=5, step=1)
 
-    # 엔진 로드
-    try:
-        engine = get_search_engine()
-    except Exception as e:
-        st.error(f"❌ 검색 엔진 로드 실패: {e}")
-        st.warning("먼저 `python week4/src/build_index.py`를 실행하여 인덱스를 구축해 주세요.")
-        return
-
+   
     # 탭 구성: 이미지 검색 vs 텍스트 검색
     tab1, tab2 = st.tabs(["🖼️ 이미지로 검색 (Visual Search)", "🔤 텍스트로 검색 (Semantic Text Search)"])
 
@@ -63,8 +93,17 @@ def main():
             col1, col2 = st.columns([1, 2])
 
             # 이미지 읽기
-            file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-            image_bgr = cv2.imdecode(file_bytes, 1)
+            uploaded_bytes = uploaded_file.getvalue()
+
+            file_array = np.frombuffer(
+                uploaded_bytes,
+                dtype=np.uint8,
+            )
+
+            image_bgr = cv2.imdecode(
+                file_array,
+                cv2.IMREAD_COLOR,
+            )
             image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
             with col1:
@@ -72,12 +111,25 @@ def main():
 
             # 검색 수행
             with st.spinner("AI가 옷 영역을 포착하고 유사 아이템을 탐색 중입니다..."):
-                results, detected_class, cropped_img = engine.search_by_image(image_bgr, top_k=top_k)
+                try:
+                    api_result = search_image_via_api(
+                        filename=uploaded_file.name,
+                        content_type=uploaded_file.type,
+                        file_bytes=uploaded_bytes,
+                        top_k=top_k,
+                    )
 
-            with col1:
-                if cropped_img is not None and cropped_img.size > 0:
-                    crop_rgb = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
-                    st.image(crop_rgb, caption=f"YOLO 검출 영역 (10% 여백 적용): {detected_class}", width=200)
+                    results = api_result["results"]
+                    detected_class = api_result["detected_class"]
+
+                except requests.RequestException as e:
+                    st.error(f"이미지 검색 API 호출 실패: {e}")
+                    return
+                 
+            # with col1:
+            #     if cropped_img is not None and cropped_img.size > 0:
+            #         crop_rgb = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
+            #         st.image(crop_rgb, caption=f"YOLO 검출 영역 (10% 여백 적용): {detected_class}", width=200)
 
             st.markdown("### 🎯 추천 유사 상품 (Top Match)")
             
@@ -88,11 +140,10 @@ def main():
                     sim_pct = r['similarity_score'] * 100
                     st.metric(label=f"Rank #{idx+1}", value=f"{sim_pct:.1f}% Match")
                     
-                    if os.path.exists(r['image_path']):
-                        img = Image.open(r['image_path'])
-                        st.image(img, use_container_width=True)
-                    else:
-                        st.warning("이미지 파일 없음")
+                    st.image(
+                        get_item_image_url(r["id"]),
+                        use_container_width=True,
+                    )
                         
                     st.caption(f"**{r['class_name'].upper()}**")
                     st.caption(f"📄 `{r['filename']}`")
@@ -125,7 +176,19 @@ def main():
 
         if text_input:
             with st.spinner(f"'{text_input}' 스타일의 상품을 벡터 공간에서 매칭 중입니다..."):
-                results = engine.search_by_text(text_input, top_k=top_k)
+                try:
+                    results = search_text_via_api(
+                        query=text_input,
+                        top_k=top_k,
+                    )
+
+                except requests.RequestException as e:
+                    st.error(f"모델 API 호출 실패: {e}")
+                    st.info(
+                        f"FastAPI 서버가 실행 중인지 확인하세요: "
+                        f"{API_BASE_URL}/health"
+                    )
+                    return
 
             st.markdown(f"### 🎯 '{text_input}' 검색 결과 (Top Match)")
             cols = st.columns(top_k)
@@ -138,11 +201,10 @@ def main():
                     
                     st.metric(label=f"Rank #{idx+1}", value=f"{relative_match:.1f}% Match", delta=f"Raw: {raw_score*100:.1f}%")
                     
-                    if os.path.exists(r['image_path']):
-                        img = Image.open(r['image_path'])
-                        st.image(img, use_container_width=True)
-                    else:
-                        st.warning("이미지 파일 없음")
+                    st.image(
+                        get_item_image_url(r["id"]),
+                        use_container_width=True,
+                    )                    
                         
                     st.caption(f"**{r['class_name'].upper()}**")
                     st.caption(f"📄 `{r['filename']}`")
