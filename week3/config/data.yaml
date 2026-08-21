@@ -1,0 +1,13 @@
+# 🛍️ Shopify/SSENSE 패션 아이템 검출용 데이터셋 설정 (실제 로컬 절대경로 세팅)
+# 이 경로는 어디서 학습 코드를 실행하더라도 완벽하게 데이터셋을 인식하도록 보장합니다.
+
+# 1. 데이터셋 절대경로 설정
+train: c:/Users/User/Projects/cv-bootcamp/week3/data/train/images
+val: c:/Users/User/Projects/cv-bootcamp/week3/data/valid/images
+test: c:/Users/User/Projects/cv-bootcamp/week3/data/test/images
+
+# 2. 클래스 수 (Number of Classes)
+nc: 9
+
+# 3. 클래스 이름 정의 (Roboflow 데이터셋에 매핑)
+names: ['coat', 'dress', 'jacket', 'pants', 'shirt', 'shoes', 'shorts', 'skirt', 't-shirt']
