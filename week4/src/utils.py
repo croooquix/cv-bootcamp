@@ -1,20 +1,21 @@
 import os
-import yaml
 import numpy as np
 import cv2
 import torch
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 
-def load_config(config_path="week4/config/search_config.yaml"):
-    """YAML 설정 파일을 로드합니다."""
-    if not os.path.exists(config_path):
-        # 상위 디렉토리 기준 경로 처리
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.abspath(os.path.join(current_dir, "../config/search_config.yaml"))
-        
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+# 경로/설정 해석은 paths.py가 담당합니다. 여기서 다시 노출해 기존 호출부
+# (build_index.py, search.py)가 import 경로를 바꾸지 않아도 되게 합니다.
+from paths import (  # noqa: F401
+    PROJECT_ROOT,
+    DEFAULT_CONFIG_PATH,
+    load_config,
+    resolve_path,
+    to_project_relative,
+    resolve_indexed_image_path,
+)
+
 
 def crop_with_padding(image, bbox, padding_ratio=0.10):
     """

@@ -36,3 +36,10 @@ week4/index/
 *.faiss
 
 
+
+# 잘못된 위치에 생성된 중복 인덱스 폴더
+week4/week4/
+
+# README가 대체한 초기 보고서 (로컬 보관)
+final_report.md
+final_report.pdf

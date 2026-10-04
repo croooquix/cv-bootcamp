@@ -108,22 +108,32 @@ whole image is embedded as a fallback rather than returning nothing.
 
 ## Running it
 
-All three commands run from the repository root.
-
 ```bash
 pip install -r week4/requirements.txt
 
-python week4/src/build_index.py           # 1. build the Faiss index
-uvicorn api:app --app-dir week4 --port 8000   # 2. inference service
-streamlit run week4/app.py                # 3. UI on :8501
+python week3/src/download_dataset.py          # 1. fetch the fashion dataset
+python week4/src/build_index.py               # 2. build the Faiss index
+uvicorn api:app --app-dir week4 --port 8000   # 3. inference service
+streamlit run week4/app.py                    # 4. UI on :8501
 ```
 
-`week4` is a plain directory rather than a package, so the service is started with
-`--app-dir` rather than `week4.api:app`.
+Config paths resolve against the repository root, so these run from any working
+directory. `week4` is a plain directory rather than a package, which is why the
+service is started with `--app-dir` instead of `week4.api:app`.
 
-The UI reads the service address from `FASHION_API_URL` and falls back to
-`http://127.0.0.1:8000`. Paths, crop padding, model name and `top_k` live in
-`week4/config/search_config.yaml`.
+Neither the dataset nor the fine-tuned YOLOv8s weights are in the repository — both
+are gitignored. Without `runs/detect/train5/weights/best.pt`, detection falls back to
+the pretrained `yolov8n.pt`, which ultralytics downloads on first use; search still
+works, with weaker garment boxes.
+
+| Variable | Effect |
+| --- | --- |
+| `FASHION_API_URL` | Service address the UI calls (default `http://127.0.0.1:8000`) |
+| `FASHION_PROJECT_ROOT` | Root for resolving indexed image paths, if the images live outside the repo |
+| `YOLO_MODEL_PATH` | Override the detector weights without editing the config |
+
+Crop padding, CLIP model name and `top_k` live in
+[`week4/config/search_config.yaml`](week4/config/search_config.yaml).
 
 ## What this does not claim
 
@@ -133,8 +143,10 @@ The UI reads the service address from `FASHION_API_URL` and falls back to
   the API hop have not been measured repeatedly.
 - **Not deployed.** Streamlit (8501) to FastAPI (8000) was verified locally only. No
   Docker image, no GPU server, no cloud.
-- **`search_config.yaml` holds absolute Windows paths** from the development machine,
-  so a fresh clone needs them edited before the index can be rebuilt.
+- **Reproduced on one machine only.** Config paths are repo-relative and the
+  indexed-path rules are covered by [`week4/tests/test_paths.py`](week4/tests/test_paths.py)
+  (15 cases, no model dependencies), but the pipeline has not been run end to end on
+  a second machine or a clean environment.
 
 Next in line: a labelled evaluation set with Recall@K and an error taxonomy, then
 repeated per-stage latency measurement.

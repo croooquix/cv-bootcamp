@@ -10,7 +10,8 @@ from utils import (
     crop_with_padding, 
     load_clip_model, 
     extract_image_embedding, 
-    normalize_vector
+    normalize_vector,
+    to_project_relative
 )
 
 def main():
@@ -83,7 +84,7 @@ def main():
                 # 메타데이터 기록
                 metadata_list.append({
                     "id": item_count,
-                    "image_path": img_path,
+                    "image_path": to_project_relative(img_path),
                     "filename": os.path.basename(img_path),
                     "class_name": class_name,
                     "confidence": round(conf, 4),
@@ -99,7 +100,7 @@ def main():
             embeddings_list.append(vec.flatten())
             metadata_list.append({
                 "id": item_count,
-                "image_path": img_path,
+                "image_path": to_project_relative(img_path),
                 "filename": os.path.basename(img_path),
                 "class_name": "full_image",
                 "confidence": 1.0,

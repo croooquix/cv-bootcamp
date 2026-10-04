@@ -14,7 +14,8 @@ from utils import (
 )
 
 class FashionSearchEngine:
-    def __init__(self, config_path="week4/config/search_config.yaml"):
+    def __init__(self, config_path=None):
+        # config_path를 주지 않으면 저장소 루트 기준 기본 설정을 사용합니다.
         self.config = load_config(config_path)
         self.index_path = os.path.abspath(self.config["paths"]["index_save_path"])
         self.meta_path = os.path.abspath(self.config["paths"]["metadata_save_path"])

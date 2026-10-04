@@ -13,6 +13,7 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from search import FashionSearchEngine
+from paths import resolve_indexed_image_path
 
 
 class TextSearchRequest(BaseModel):
@@ -93,20 +94,9 @@ def search_text(
 from fastapi.responses import FileResponse
 
 def resolve_image_path(metadata_path: str) -> str:
-    """Windows에서 생성된 메타데이터 경로를 현재 서버 경로로 변환합니다."""
-    normalized = metadata_path.replace("\\", "/")
+    """메타데이터의 이미지 경로를 현재 실행 환경의 경로로 바꿉니다."""
+    return resolve_indexed_image_path(metadata_path)
 
-    windows_root = "c:/Users/User/Projects/cv-bootcamp"
-    server_root = os.environ.get(
-        "FASHION_PROJECT_ROOT",
-        "/mnt/c/Users/User/Projects/cv-bootcamp",
-    )
-
-    if normalized.lower().startswith(windows_root.lower()):
-        relative_path = normalized[len(windows_root):].lstrip("/")
-        return os.path.join(server_root, *relative_path.split("/"))
-
-    return normalized
 
 @app.get("/items/{item_id}/image")
 def get_item_image(item_id: int, request: Request):

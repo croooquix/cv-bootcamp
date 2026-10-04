@@ -1,13 +1,20 @@
 # 🛍️ Week 4 Multimodal Fashion Search Configuration
+#
+# paths 항목은 저장소 루트 기준 상대 경로로 적습니다. utils.load_config()가
+# 읽는 시점에 절대 경로로 바꾸므로, 어느 디렉토리에서 실행하든 같은 위치를
+# 가리킵니다. 절대 경로를 적으면 그 값을 그대로 사용합니다.
 
 paths:
-  # YOLO Model Path (3주차에서 최적화한 YOLOv8s 가중치 사용)
-  yolo_model_path: "c:/Users/User/Projects/cv-bootcamp/runs/detect/train5/weights/best.pt"
+  # 3주차에서 학습한 YOLOv8s 가중치. runs/ 는 Git에서 제외되므로 새로 클론한
+  # 환경에는 없고, 그 경우 아래 fallback 모델이 대신 사용됩니다.
+  yolo_model_path: "runs/detect/train5/weights/best.pt"
+  # 경로가 아니라 ultralytics가 이름으로 받아 내려받는 사전학습 모델입니다.
   yolo_fallback_path: "yolov8n.pt"
-  
-  # 데이터셋 경로
-  dataset_images_dir: "c:/Users/User/Projects/cv-bootcamp/week3/data/train/images"
-  
+
+  # 인덱싱 대상 데이터셋. week3/data/ 도 Git에서 제외되어 있어
+  # week3/src/download_dataset.py 로 먼저 내려받아야 합니다.
+  dataset_images_dir: "week3/data/train/images"
+
   # 인덱스 및 메타데이터 저장 경로
   index_save_path: "week4/index/fashion_index.faiss"
   metadata_save_path: "week4/index/fashion_meta.json"
